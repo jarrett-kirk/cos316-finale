@@ -18,7 +18,7 @@ func main() {
 	gopacket.SerializeLayers(buf, opts,
 		&layers.Ethernet{},
 		&layers.IPv4{
-			SrcIP:    net.IPv4(120, 64, 20, 10),
+			SrcIP:    net.IPv4(255, 255, 255, 0),
 			DstIP:    net.IPv4(190, 20, 69, 11),
 			Protocol: layers.IPProtocolTCP,
 		},
