@@ -1,5 +1,17 @@
 package iptable
 
+// Table structure contains a set of chains
+type Table struct {
+	name   string
+	chains []Chain
+}
+
+// chain structure
+type Chain struct {
+	name  string
+	rules []Rule
+}
+
 // rules structure
 type Rule struct {
 	// target
@@ -10,33 +22,38 @@ type Rule struct {
 	IPProtocol string
 	DstPort    string
 	SrcPort    string
-	ethernet   string
-}
-
-// chain structure
-type Chain struct {
-	name  string
-	rules []*Rule
-}
-
-// Table structure contains a set of chains
-type Table struct {
-	name   string
-	chains []*Chain
+	// ethernet   string
 }
 
 // function initialize IPtable
 func NewIPTable() *Table {
-	filter := new(Table)
-	return filter
+	IPtable := new(Table)
+	IPtable.name = "filter"
+	return IPtable.defaultTable()
+}
+
+func (table *Table) defaultTable() *Table {
+
+	rule := Rule{
+		target: "ACCEPT",
+	}
+
+	rules := []Rule{rule}
+
+	table.addChain("INPUT", rules)
+	table.addChain("OUTPUT", rules)
+	table.addChain("FORWARD", rules)
+	return table
 }
 
 // function to add a chain
-func addChain() {
+func (table *Table) addChain(name string, rules []Rule) *Table {
 
-}
+	chain := Chain{
+		name:  name,
+		rules: rules,
+	}
 
-// function to add a rule
-func addRule() {
-
+	table.chains = append(table.chains, chain)
+	return table
 }

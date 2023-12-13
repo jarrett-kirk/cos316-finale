@@ -22,7 +22,10 @@ func main() {
 			DstIP:    net.IPv4(190, 20, 69, 11),
 			Protocol: layers.IPProtocolTCP,
 		},
-		&layers.TCP{},
+		&layers.TCP{
+			SrcPort: layers.TCPPort(1234),
+			DstPort: layers.TCPPort(443),
+		},
 		gopacket.Payload([]byte{1, 2, 3, 4}))
 	packetData := buf.Bytes()
 	fmt.Println(packetData)
