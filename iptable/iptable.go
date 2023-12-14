@@ -17,11 +17,11 @@ type Rule struct {
 	// target
 	target string
 	// matches
-	SrcIP      string
-	DstIP      string
-	IPProtocol string
-	DstPort    string
-	SrcPort    string
+	SrcIP string
+	DstIP string
+	// IPProtocol string
+	DstPort string
+	SrcPort string
 	// ethernet   string
 }
 
@@ -45,6 +45,8 @@ func (table *Table) defaultTable() *Table {
 	table.addChain("FORWARD", rules)
 	return table
 }
+
+// function to add a rule to a chain
 
 // function to add a chain
 func (table *Table) addChain(name string, rules []Rule) *Table {
