@@ -1,13 +1,31 @@
 package iptable
 
+// TO DOS:
+// 1. Testing
+// 3. add possible target options
+// 3. Jump!!
+// 4. Routing !!
+// 5. Write PAPER
+// 6. DEMO VIDEO
+// IF TIME
+// 5. Editing rules
+// 6. Inserting rules
+// 7. Replacing rules
+// 8. ERROR CHECKS!
+
 import (
 	"fmt"
+	"strings"
 )
 
 // packet stucture containing
 type Packet struct {
-	SourceIP string
-	DestIP   string
+	SourceIP   string
+	DestIP     string
+	SourcePort string
+	DestPort   string
+	Protocol   string
+	Length     string
 }
 
 // Table structure contains a set of chains
@@ -25,15 +43,15 @@ type Chain struct {
 
 // rules structure
 type Rule struct {
-	// target
+	name   string
 	target string
-	// matches
-	SrcIP string
-	DstIP string
-	// IPProtocol string
-	DstPort string
-	SrcPort string
-	// ethernet   string
+
+	SrcIP    string
+	DstIP    string
+	Protocol string
+	DstPort  string
+	SrcPort  string
+	Length   string
 }
 
 // function initialize IPtable
@@ -45,22 +63,18 @@ func NewIPTable(policy string) *Table {
 }
 
 func (table *Table) defaultTable(policy string) *Table {
-	table.addChain("INPUT", policy)
-	table.addChain("OUTPUT", policy)
-	table.addChain("FORWARD", policy)
+	table.AddChain("INPUT", policy)
+	table.AddChain("OUTPUT", policy)
+	table.AddChain("FORWARD", policy)
 	return table
 }
 
-func (table *Table) getTableInfo() (string, map[string]*Chain) {
-	return table.name, table.chains
-}
-
-func (table *Table) changePolicy(chain string, policy string) {
+func (table *Table) ChangePolicy(chain string, policy string) {
 	table.chains[chain].defaultPolicy = policy
 }
 
 // function to add a chain
-func (table *Table) addChain(name string, defaultPolicy string) {
+func (table *Table) AddChain(name string, defaultPolicy string) {
 	rule := []Rule{}
 
 	chain := Chain{
@@ -72,22 +86,37 @@ func (table *Table) addChain(name string, defaultPolicy string) {
 	table.chains[name] = &chain
 }
 
+// remove rule function (to avoid shifting the list just creates a new list)
+func (table *Table) DeleteRule(chainName string, ruleName string) {
+	chain := table.chains[chainName]
+	rules := []Rule{}
+	if chain != nil {
+		for i := 0; i < len(chain.rules); i++ {
+			if ruleName != chain.rules[i].name {
+				rules = append(rules, chain.rules[i])
+			}
+		}
+	}
+	chain.rules = rules
+}
+
 // function to add a rule to a chain
-func (table *Table) addRule(chainName string, SrcIP string, DstIP string, DstPort string, SrcPort string, target string) {
+func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, DstIP string, Protocol string,
+	DstPort string, SrcPort string, Length string, target string) {
 
 	// get chain in the table
 	chain := table.chains[chainName]
 
 	rule := Rule{
-		// target
+		name:   ruleName,
 		target: target,
-		// matches
-		SrcIP: SrcIP,
-		DstIP: DstIP,
-		// IPProtocol string
-		DstPort: DstPort,
-		SrcPort: SrcPort,
-		// ethernet   string
+
+		SrcIP:    SrcIP,
+		DstIP:    DstIP,
+		Protocol: Protocol,
+		DstPort:  DstPort,
+		SrcPort:  SrcPort,
+		Length:   Length,
 	}
 
 	// if chain exists append rule to end of function
@@ -101,32 +130,41 @@ func (table *Table) addRule(chainName string, SrcIP string, DstIP string, DstPor
 // The IP packet to check the conditions against
 func checkRule(rule Rule, packet Packet) (target string) {
 
-	// check if it matches
-	if rule.DstIP == packet.DestIP && rule.SrcIP == packet.SourceIP {
+	// values := reflect.ValueOf(rule)
+	// types := values.Type()
+	// for i := 0; i < values.NumField(); i++ {
+	// 	if types.Field(i).Name == "ANYVAL" {
+
+	// 	}
+	// }
+
+	if rule.DstIP == "ANYVAL" {
+		rule.DstIP = packet.DestIP
+	}
+	if rule.SrcIP == "ANYVAL" {
+		rule.SrcIP = packet.SourceIP
+	}
+	if rule.DstPort == "ANYVAL" {
+		rule.DstPort = packet.DestPort
+	}
+	if rule.SrcPort == "ANYVAL" {
+		rule.SrcPort = packet.SourcePort
+	}
+	if rule.Length == "ANYVAL" {
+		rule.Length = packet.Length
+	}
+	if rule.Protocol == "ANYVAL" {
+		rule.Protocol = packet.Protocol
+	}
+
+	if rule.DstIP == packet.DestIP && rule.SrcIP == packet.SourceIP && rule.SrcPort == packet.SourcePort && rule.DstPort == packet.DestPort && rule.Length == packet.Length && rule.Protocol == packet.Protocol {
 		target = rule.target
 	} else {
 		target = ""
 	}
 
 	return target
-
-	/*
-		if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); tcpLayer != nil {
-			fmt.Println("This is a IPv4 packet!")
-			// Get actual IPv4 data from this layer
-			ipv4, _ := ipv4Layer.(*layers.IPv4)
-			fmt.Printf("From src ip %d to dst ip %d\n", ipv4.SrcIP, ipv4.DstIP)
-		}
-	*/
-
-	// target := rule.target
-	// dstIP := rule.DstIP
-	// dstPort := rule.DstPort
-	// srcIP := rule.SrcIP
-	// srcPort := rule.SrcPort
 }
-
-// remove rule function
 
 func (table *Table) TraverseChains(packet []string) (target string) {
 	// First, routing decision. If it is destined for an outside network, only (filter FORWARD)
@@ -135,6 +173,14 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	packetData := Packet{
 		SourceIP: packet[2],
 		DestIP:   packet[3],
+		Protocol: packet[4],
+		Length:   packet[5],
+	}
+	if packetData.Protocol == "TCP" || packetData.Protocol == "UDP" {
+		ports := strings.Fields(packet[6])
+		fmt.Println(ports)
+		packetData.SourcePort = ports[0]
+		packetData.DestPort = ports[2]
 	}
 	fmt.Println("Packet Data ", packetData)
 
@@ -148,8 +194,14 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 
 	if local == true {
 		// iterate over all the rules in INPUT first
+		fmt.Println("HERE ", table.chains["INPUT"].rules)
 		for i := 0; i < len(table.chains["INPUT"].rules); i++ {
+			fmt.Println("Rule ", table.chains["INPUT"].rules)
 			target = checkRule(table.chains["INPUT"].rules[i], packetData)
+			fmt.Println("Target ", target)
+			if target == "ACCEPT" || target == "DROP" {
+				break
+			}
 		}
 		if target == "" {
 			target = table.chains["INPUT"].defaultPolicy
