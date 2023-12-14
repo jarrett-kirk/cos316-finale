@@ -1,7 +1,6 @@
 package main
 
 import (
-	"COS316-FINALE/iptable"
 	"fmt"
 	"net"
 
@@ -32,23 +31,6 @@ func main() {
 	fmt.Println(packetData)
 
 	// Make a table and print
-	filter := iptable.NewIPTable("ACCEPT")
-	fmt.Println("filter ", filter)
-
-	// Decode a packet
-	packet := gopacket.NewPacket(packetData, layers.LayerTypeEthernet, gopacket.Default)
-	// Get the TCP layer from this packet
-	tcpLayer := packet.Layer(layers.LayerTypeTCP)
-	fmt.Println("tcpLayer: ", tcpLayer)
-	if tcpLayer != nil {
-		fmt.Println("This is a TCP packet!")
-		// Get actual TCP data from this layer
-		tcp, _ := tcpLayer.(*layers.TCP)
-		fmt.Printf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
-	}
-	// Iterate over all layers, printing out each layer type
-	for _, layer := range packet.Layers() {
-		fmt.Println("PACKET LAYER:", layer.LayerType())
-	}
+	filter := NewIP
 
 }
