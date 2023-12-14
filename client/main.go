@@ -2,14 +2,39 @@ package main
 
 import (
 	"COS316-FINALE/iptable"
+	"encoding/csv"
 	"fmt"
+	"log"
 	"net"
+	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
 func main() {
+
+	// os.Open() opens specific file in
+	// read-only mode and this return
+	// a pointer of type os.File
+	file, err := os.Open("IP-packets.csv")
+
+	// Checks for the error
+	if err != nil {
+		log.Fatal("Error while reading the file", err)
+	}
+	defer file.Close()
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+
+	if err != nil {
+		fmt.Println("Error reading records")
+	}
+
+	for _, eachrecord := range records {
+		fmt.Println(eachrecord)
+	}
+
 	// var eth layers.Ethernet
 	// var ip4 layers.IPv4
 	// var ip6 layers.IPv6
