@@ -36,7 +36,7 @@ func main() {
 	fmt.Println("filter ", filter)
 
 	// Decode a packet
-	packet := gopacket.NewPacket(packetData, layers.LayerTypeEthernet, gopacket.Default)
+	packet := gopacket.NewPacket(packetData, layers.LayerTypeTCP, gopacket.Default)
 	// Get the TCP layer from this packet
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	fmt.Println("tcpLayer: ", tcpLayer)
@@ -50,5 +50,4 @@ func main() {
 	for _, layer := range packet.Layers() {
 		fmt.Println("PACKET LAYER:", layer.LayerType())
 	}
-
 }
