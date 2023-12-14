@@ -5,9 +5,9 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+
 	// "net"
 	"os"
-
 	// "github.com/google/gopacket"
 	// "github.com/google/gopacket/layers"
 )
@@ -16,7 +16,7 @@ func main() {
 
 	type Packet struct {
 		SourceIP string
-		DestIP string
+		DestIP   string
 	}
 
 	// os.Open() opens specific file in
@@ -36,19 +36,19 @@ func main() {
 		fmt.Println("Error reading records")
 	}
 
-	packets := []Packet{}
-	for _, eachrecord := range records {
+	// for loop we could use to pass each packet in records to traverse chain
+	/*
+		for _, eachrecord := range records {
 
-		newPacket := {
-
-			
+			// fmt.Println(eachrecord)
 		}
-		fmt.Println(eachrecord)
-	}
+	*/
 
 	// Make a table and print
 	filter := iptable.NewIPTable("ACCEPT")
 	fmt.Println("filter ", filter)
+	target := filter.TraverseChains(records[1])
+	fmt.Println("Target: ", target)
 
 	// var eth layers.Ethernet
 	// var ip4 layers.IPv4
@@ -71,7 +71,7 @@ func main() {
 	packetData := buf.Bytes()
 	fmt.Println(packetData)
 
-	
+
 
 	// Decode a packet
 	packet := gopacket.NewPacket(packetData, layers.LayerTypeTCP, gopacket.Default)

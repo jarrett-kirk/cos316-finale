@@ -1,5 +1,15 @@
 package iptable
 
+import (
+	"fmt"
+)
+
+// packet stucture containing
+type Packet struct {
+	SourceIP string
+	DestIP   string
+}
+
 // Table structure contains a set of chains
 type Table struct {
 	name   string
@@ -89,17 +99,25 @@ func (table *Table) addRule(chainName string, SrcIP string, DstIP string, DstPor
 
 // Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
 // The IP packet to check the conditions against
-/*
-func checkRule(rule Rule, packetData []byte) target {
+func checkRule(rule Rule, packet Packet) (target string) {
 
-	packet := gopacket.NewPacket(packetData, layers.LayerTypeEthernet, gopacket.Default)
-
-	if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); tcpLayer != nil {
-		fmt.Println("This is a IPv4 packet!")
-		// Get actual IPv4 data from this layer
-		ipv4, _ := ipv4Layer.(*layers.IPv4)
-		fmt.Printf("From src ip %d to dst ip %d\n", ipv4.SrcIP, ipv4.DstIP)
+	// check if it matches
+	if rule.DstIP == packet.DestIP && rule.SrcIP == packet.SourceIP {
+		target = rule.target
+	} else {
+		target = ""
 	}
+
+	return target
+
+	/*
+		if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); tcpLayer != nil {
+			fmt.Println("This is a IPv4 packet!")
+			// Get actual IPv4 data from this layer
+			ipv4, _ := ipv4Layer.(*layers.IPv4)
+			fmt.Printf("From src ip %d to dst ip %d\n", ipv4.SrcIP, ipv4.DstIP)
+		}
+	*/
 
 	// target := rule.target
 	// dstIP := rule.DstIP
@@ -107,27 +125,40 @@ func checkRule(rule Rule, packetData []byte) target {
 	// srcIP := rule.SrcIP
 	// srcPort := rule.SrcPort
 }
-*/
 
 // remove rule function
 
-func (table *Table) traverseChains(packet []byte) (target string) {
+func (table *Table) TraverseChains(packet []string) (target string) {
 	// First, routing decision. If it is destined for an outside network, only (filter FORWARD)
-	// if it stays local, (filter INPUT) and then (filter OUTPUT)
+	//  if it stays local, (filter INPUT) and then (filter OUTPUT)
+	fmt.Println("Packet argument: ", packet)
+	packetData := Packet{
+		SourceIP: packet[2],
+		DestIP:   packet[3],
+	}
+	fmt.Println("Packet Data ", packetData)
+
+	local := true
+	// check if local is not true and set to false if necessary
+	// net.Interfaces()
+
 	// If ACCEPT or DROP are ever come across, just return target
 	// While traversing a chain, if the target is a JUMP, go into the new chain
 	// If nothing catches the packet in this new jumped chain, go back to the original chain
 
-	// if local == true {
-	// 	// iterate over all the rules in INPUT first
-	// 	for i := 0; i < len(table.chains["INPUT"].rules); i++ {
-	// 		target := checkRule(table.chains["INPUT"].rules[i], packet)
-	// 	}
-	// } else {
-
-	// }
+	if local == true {
+		// iterate over all the rules in INPUT first
+		for i := 0; i < len(table.chains["INPUT"].rules); i++ {
+			target = checkRule(table.chains["INPUT"].rules[i], packetData)
+		}
+		if target == "" {
+			target = table.chains["INPUT"].defaultPolicy
+		}
+	} else {
+		// TO DO: ELSE CASE HANDLES FOWARDING
+	}
 
 	// return
-	return ""
+	return target
 
 }
