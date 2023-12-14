@@ -5,19 +5,24 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
-	"net"
+	// "net"
 	"os"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	// "github.com/google/gopacket"
+	// "github.com/google/gopacket/layers"
 )
 
 func main() {
 
+	type Packet struct {
+		SourceIP string
+		DestIP string
+	}
+
 	// os.Open() opens specific file in
 	// read-only mode and this return
 	// a pointer of type os.File
-	file, err := os.Open("IP-packets.csv")
+	file, err := os.Open("IP-packet.csv")
 
 	// Checks for the error
 	if err != nil {
@@ -31,15 +36,25 @@ func main() {
 		fmt.Println("Error reading records")
 	}
 
+	packets := []Packet{}
 	for _, eachrecord := range records {
+
+		newPacket := {
+
+			
+		}
 		fmt.Println(eachrecord)
 	}
+
+	// Make a table and print
+	filter := iptable.NewIPTable("ACCEPT")
+	fmt.Println("filter ", filter)
 
 	// var eth layers.Ethernet
 	// var ip4 layers.IPv4
 	// var ip6 layers.IPv6
 	// var tcp layers.TCP
-	buf := gopacket.NewSerializeBuffer()
+	/*buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{}
 	gopacket.SerializeLayers(buf, opts,
 		// &layers.Ethernet{},
@@ -56,9 +71,7 @@ func main() {
 	packetData := buf.Bytes()
 	fmt.Println(packetData)
 
-	// Make a table and print
-	filter := iptable.NewIPTable("ACCEPT")
-	fmt.Println("filter ", filter)
+	
 
 	// Decode a packet
 	packet := gopacket.NewPacket(packetData, layers.LayerTypeTCP, gopacket.Default)
@@ -75,4 +88,5 @@ func main() {
 	for _, layer := range packet.Layers() {
 		fmt.Println("PACKET LAYER:", layer.LayerType())
 	}
+	*/
 }
