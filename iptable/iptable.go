@@ -1,7 +1,5 @@
 package iptable
 
-import "github.com/google/gopacket/layers"
-
 // Table structure contains a set of chains
 type Table struct {
 	name   string
@@ -44,8 +42,7 @@ func (table *Table) defaultTable(policy string) *Table {
 }
 
 func (table *Table) getTableInfo() (string, map[string]*Chain) {
- 
-
+	return table.name, table.chains
 }
 
 func (table *Table) changePolicy(chain string, policy string) {
@@ -54,11 +51,11 @@ func (table *Table) changePolicy(chain string, policy string) {
 
 // function to add a chain
 func (table *Table) addChain(name string, defaultPolicy string) {
-	rule := []Rule
+	rule := []Rule{}
 
 	chain := Chain{
-		name: name,
-		rules: rule,
+		name:          name,
+		rules:         rule,
 		defaultPolicy: defaultPolicy,
 	}
 
@@ -85,16 +82,16 @@ func (table *Table) addRule(chainName string, SrcIP string, DstIP string, DstPor
 
 	// if chain exists append rule to end of function
 	if chain != nil {
-		chain.rules.append(rule)
-	} 
+		chain.rules = append(chain.rules, rule)
+	}
 	return
 }
 
-
 // Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
 // The IP packet to check the conditions against
+/*
 func checkRule(rule Rule, packetData []byte) target {
-	
+
 	packet := gopacket.NewPacket(packetData, layers.LayerTypeEthernet, gopacket.Default)
 
 	if ipv4Layer := packet.Layer(layers.LayerTypeIPv4); tcpLayer != nil {
@@ -104,13 +101,13 @@ func checkRule(rule Rule, packetData []byte) target {
 		fmt.Printf("From src ip %d to dst ip %d\n", ipv4.SrcIP, ipv4.DstIP)
 	}
 
-	
-	target := rule.target
-	dstIP := rule.DstIP
-	dstPort := rule.DstPort
-	srcIP := rule.SrcIP
-	srcPort := rule.SrcPort
+	// target := rule.target
+	// dstIP := rule.DstIP
+	// dstPort := rule.DstPort
+	// srcIP := rule.SrcIP
+	// srcPort := rule.SrcPort
 }
+*/
 
 // remove rule function
 
@@ -120,19 +117,17 @@ func (table *Table) traverseChains(packet []byte) (target string) {
 	// If ACCEPT or DROP are ever come across, just return target
 	// While traversing a chain, if the target is a JUMP, go into the new chain
 	// If nothing catches the packet in this new jumped chain, go back to the original chain
-	
-	
-	if (local == true) {
-		// iterate over all the rules in INPUT first
-		for i := 0; i < len(table.chains["INPUT"].rules); i++ {
-			target := checkRule(table.chains["INPUT"].rules[i], packet)
-		}
-	}
 
-	else {
-		
-	}
+	// if local == true {
+	// 	// iterate over all the rules in INPUT first
+	// 	for i := 0; i < len(table.chains["INPUT"].rules); i++ {
+	// 		target := checkRule(table.chains["INPUT"].rules[i], packet)
+	// 	}
+	// } else {
 
-	return
+	// }
+
+	// return
+	return ""
 
 }
