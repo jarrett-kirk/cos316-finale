@@ -92,6 +92,9 @@ func (table *Table) AddUserChain(name string) {
 // Returns true if successful and false if chain was not a valid default chain
 func (table *Table) ChangePolicy(chain string, policy string) bool {
 	if chain == "INPUT" || chain == "OUTPUT" || chain == "FORWARD" {
+		if(policy != "ACCEPT" || policy != "DROP" {
+			return false
+		}	
 		table.chains[chain].defaultPolicy = policy
 		return true
 	}
