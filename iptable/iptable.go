@@ -14,8 +14,6 @@ package iptable
 // 8. ERROR CHECKS!
 
 import (
-	"fmt"
-	"net"
 	"strings"
 )
 
@@ -49,9 +47,9 @@ type Rule struct {
 
 	SrcIP    string
 	DstIP    string
-	Protocol string
-	DstPort  string
 	SrcPort  string
+	DstPort  string
+	Protocol string
 	Length   string
 }
 
@@ -87,6 +85,18 @@ func (table *Table) AddChain(name string, defaultPolicy string) {
 	table.chains[name] = &chain
 }
 
+// function to add a chain
+func (table *Table) AddUserChain(name string) {
+	rule := []Rule{}
+
+	chain := Chain{
+		name:  name,
+		rules: rule,
+	}
+
+	table.chains[name] = &chain
+}
+
 // remove rule function (to avoid shifting the list just creates a new list)
 func (table *Table) DeleteRule(chainName string, ruleName string) {
 	chain := table.chains[chainName]
@@ -102,8 +112,8 @@ func (table *Table) DeleteRule(chainName string, ruleName string) {
 }
 
 // function to add a rule to a chain
-func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, DstIP string, Protocol string,
-	DstPort string, SrcPort string, Length string, target string) {
+func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, DstIP string,
+	SrcPort string, DstPort string, Protocol string, Length string, target string) {
 
 	// get chain in the table
 	chain := table.chains[chainName]
@@ -130,6 +140,7 @@ func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, Dst
 // Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
 // The IP packet to check the conditions against
 func checkRule(rule Rule, packet Packet) (target string) {
+
 	if rule.DstIP == "ANYVAL" {
 		rule.DstIP = packet.DestIP
 	}
@@ -149,7 +160,7 @@ func checkRule(rule Rule, packet Packet) (target string) {
 		rule.Protocol = packet.Protocol
 	}
 
-	if rule.DstIP == packet.DestIP && rule.SrcIP == packet.SourceIP && rule.SrcPort == packet.SourcePort && rule.DstPort == packet.DestPort && rule.Length == packet.Length && rule.Protocol == packet.Protocol {
+	if rule.SrcIP == packet.SourceIP && rule.DstIP == packet.DestIP && rule.SrcPort == packet.SourcePort && rule.DstPort == packet.DestPort && rule.Protocol == packet.Protocol && rule.Length == packet.Length {
 		target = rule.target
 	} else {
 		target = ""
@@ -162,7 +173,7 @@ func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target stri
 	// iterate over all the rules in this chain
 	for i := 0; i < len(chain.rules); i++ {
 		target = checkRule(chain.rules[i], packet)
-		fmt.Println("just checked the target: ", target)
+		// fmt.Println("just checked the target: ", target)
 		// if target is ACCEPT or DROP, break out immediately
 		if target == "ACCEPT" || target == "DROP" {
 			return target
@@ -170,7 +181,10 @@ func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target stri
 			// if the target is the name of a chain, traverse that chain.
 			for _, value := range table.chains {
 				if target == value.name {
-					table.traverseSingleChain(packet, *table.chains[value.name])
+					target = table.traverseSingleChain(packet, *table.chains[value.name])
+					if target == "ACCEPT" || target == "DROP" {
+						return target
+					}
 				}
 			}
 		}
@@ -193,7 +207,6 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 		packetData.SourcePort = ports[0]
 		packetData.DestPort = ports[2]
 	}
-	fmt.Println("Packet Data ", packetData)
 
 	local := true
 	// get local addresses
@@ -207,28 +220,28 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 		}
 	*/
 
-	ifaces, err := net.Interfaces()
-	if err == nil {
-		// handle err
-		for _, i := range ifaces {
-			addrs, err := i.Addrs()
-			if err != nil {
-				break
-			}
-			// handle err
-			for _, addr := range addrs {
-				var ip net.IP
-				switch v := addr.(type) {
-				case *net.IPNet:
-					ip = v.IP
-				case *net.IPAddr:
-					ip = v.IP
-				}
-				// process IP address
-				fmt.Println("ip: ", ip)
-			}
-		}
-	}
+	// ifaces, err := net.Interfaces()
+	// if err == nil {
+	// 	// handle err
+	// 	for _, i := range ifaces {
+	// 		addrs, err := i.Addrs()
+	// 		if err != nil {
+	// 			break
+	// 		}
+	// 		// handle err
+	// 		for _, addr := range addrs {
+	// 			var ip net.IP
+	// 			switch v := addr.(type) {
+	// 			case *net.IPNet:
+	// 				ip = v.IP
+	// 			case *net.IPAddr:
+	// 				ip = v.IP
+	// 			}
+	// 			// process IP address
+	// 			fmt.Println("ip: ", ip)
+	// 		}
+	// 	}
+	// }
 
 	// check if local is not true and set to false if necessary
 	// net.Interfaces()
@@ -240,24 +253,24 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	if local {
 		// iterate over all the rules in INPUT first
 		target := table.traverseSingleChain(packetData, *table.chains["INPUT"])
-		fmt.Println("target after traverseSingleChain: ", target)
+		// fmt.Println("target after traverseSingleChain: ", target)
 		if target == "ACCEPT" || target == "DROP" {
 			return target
 		} else if target == "" {
-			fmt.Println("using the defualt policy for INPUT")
+			// fmt.Println("using the defualt policy for INPUT")
 			target = table.chains["INPUT"].defaultPolicy
 			return target
 		}
 	} else {
 		target := table.traverseSingleChain(packetData, *table.chains["FORWARD"])
 		if target == "" {
-			fmt.Println("using the defualt policy for FORWARD")
+			// fmt.Println("using the defualt policy for FORWARD")
 			target = table.chains["FORWARD"].defaultPolicy
 			return target
 		}
 	}
 
-	fmt.Println("target before return: ", target)
+	// fmt.Println("target before return: ", target)
 	return target
 
 }
