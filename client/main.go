@@ -11,13 +11,13 @@ import (
 )
 
 func filterData(filter *iptable.Table, records [][]string) {
-	// for _, eachrecord := range records {
-	// 	if filter.TraverseChains(eachrecord) == "ACCEPT" {
-	// 		fmt.Println(eachrecord)
-	// 	}
-	// }
-	target := filter.TraverseChains(records[1])
-	fmt.Println(target)
+	for _, eachrecord := range records {
+		if filter.TraverseChains(eachrecord) == "ACCEPT" {
+			fmt.Println(eachrecord)
+		}
+	}
+	// target := filter.TraverseChains(records[1])
+	// fmt.Println(target)
 }
 
 func main() {
@@ -48,7 +48,7 @@ func main() {
 	// 6. Add a rule to INPUT to jump to our user chain if destip == something, send a bunch of stuff through
 	mainFilter := iptable.NewIPTable("DROP")
 
-	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "ANYVAL", "ANYVAL", "443", "TCP", "ANYVAL", "ACCEPT")
+	mainFilter.AddRule("OUTPUT", "protocolRule", "10.0.0.252", "ANYVAL", "ANYVAL", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
 
 	// mainFilter.AddUserChain("userChain")
 	// mainFilter.AddRule("INPUT", "ipRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "userChain")

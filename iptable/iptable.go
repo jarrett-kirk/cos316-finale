@@ -1,7 +1,6 @@
 package iptable
 
 import (
-	"fmt"
 	"net"
 	"strings"
 )
@@ -178,7 +177,6 @@ func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target stri
 	// iterate over all the rules in this chain
 	for i := 0; i < len(chain.rules); i++ {
 		target = checkRule(chain.rules[i], packet)
-		// fmt.Println("just checked the target: ", target)
 		// if t`arget is ACCEPT or DROP, break out immediately
 		if target == "ACCEPT" || target == "DROP" {
 			return target
@@ -242,13 +240,8 @@ func (table *Table) routingDecision(packetData Packet) (localSource bool, localD
 			localDest = true
 		}
 	}
-
-	// [127.0.0.1 ::1 fe80::1 fe80::38f9:d3ff:fe31:ff0e fe80::8d4:55f0:4b5c:ba8a 10.8.30.80 fe80::741b:e5ff:fef7:ad09 fe80::741b:e5ff:fef7:ad09 fe80::810b:f11c:54c8:fd29 fe80::5533:f410:b90b:1ba8 fe80::ce81:b1c:bd2c:69e fe80::7d1:ab3d:8490:1d5f fe80::8131:7bc3:5e7d:4efc fe80::aede:48ff:fe00:1122]
-	fmt.Println(packetData.SourceIP)
-	fmt.Println(packetData.DestIP)
-
 	return localSource, localDest
-}``
+}
 
 // Takes as input a packet routes the packet to the correct chain in the table
 // and then traverses the rules in that table until a target decision is made. Returns
