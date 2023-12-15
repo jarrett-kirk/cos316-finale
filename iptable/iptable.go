@@ -264,27 +264,30 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	// If ACCEPT or DROP are ever come across, just return target
 	// While traversing a chain, if the target is a JUMP, go into the new chain
 	// If nothing catches the packet in this new jumped chain, go back to the original chain
-	if localDest {
-		// iterate over all the rules in INPUT first
-		target := table.traverseSingleChain(packetData, *table.chains["INPUT"])
-		// fmt.Println("target after traverseSingleChain: ", target)
-		if target == "ACCEPT" || target == "DROP" {
-			return target
-		} else if target == "" {
-			// fmt.Println("using the defualt policy for INPUT")
-			target = table.chains["INPUT"].defaultPolicy
-			return target
+	if localDest || localSource {
+		if localDest {
+			// iterate over all the rules in INPUT first
+			target := table.traverseSingleChain(packetData, *table.chains["INPUT"])
+			// fmt.Println("target after traverseSingleChain: ", target)
+			if target == "ACCEPT" || target == "DROP" {
+				return target
+			} else if target == "" {
+				// fmt.Println("using the defualt policy for INPUT")
+				target = table.chains["INPUT"].defaultPolicy
+				return target
+			}
 		}
-	} else if localSource {
-		// iterate over all the rules in INPUT first
-		target := table.traverseSingleChain(packetData, *table.chains["OUTPUT"])
-		// fmt.Println("target after traverseSingleChain: ", target)
-		if target == "ACCEPT" || target == "DROP" {
-			return target
-		} else if target == "" {
-			// fmt.Println("using the defualt policy for INPUT")
-			target = table.chains["OUTPUT"].defaultPolicy
-			return target
+		if localSource {
+			// iterate over all the rules in INPUT first
+			target := table.traverseSingleChain(packetData, *table.chains["OUTPUT"])
+			// fmt.Println("target after traverseSingleChain: ", target)
+			if target == "ACCEPT" || target == "DROP" {
+				return target
+			} else if target == "" {
+				// fmt.Println("using the defualt policy for INPUT")
+				target = table.chains["OUTPUT"].defaultPolicy
+				return target
+			}
 		}
 	} else {
 		target := table.traverseSingleChain(packetData, *table.chains["FORWARD"])
