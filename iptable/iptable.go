@@ -14,6 +14,8 @@ package iptable
 // 8. ERROR CHECKS!
 
 import (
+	"fmt"
+	"net"
 	"strings"
 )
 
@@ -141,6 +143,8 @@ func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, Dst
 // The IP packet to check the conditions against
 func checkRule(rule Rule, packet Packet) (target string) {
 
+	fmt.Println(rule.SrcPort == packet.SourcePort)
+
 	if rule.DstIP == "ANYVAL" {
 		rule.DstIP = packet.DestIP
 	}
@@ -162,6 +166,7 @@ func checkRule(rule Rule, packet Packet) (target string) {
 
 	if rule.SrcIP == packet.SourceIP && rule.DstIP == packet.DestIP && rule.SrcPort == packet.SourcePort && rule.DstPort == packet.DestPort && rule.Protocol == packet.Protocol && rule.Length == packet.Length {
 		target = rule.target
+		fmt.Println("returning a matched target: ", target)
 	} else {
 		target = ""
 	}
@@ -208,49 +213,52 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 		packetData.DestPort = ports[2]
 	}
 
-	local := true
+	localSource := false
+	localDest := false
 	// get local addresses
-	/*
-		addrs, err := net.InterfaceAddrs()
-		if err == nil {
-			for i := 0; i < len(addrs); i++ {
-				fmt.Println(addrs[i])
+	localAddrs := []net.IP{}
+	// Section adapted from : https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
+	// Author: Sebastian Original source: https://go.dev/play/p/BDt3qEQ_2H
+	// list of all system interfaces
+	ifaces, err := net.Interfaces()
+	if err == nil {
+		// handle err
+		for _, i := range ifaces {
+			// get addresses
+			addrs, err := i.Addrs()
+			if err != nil {
+				break
 			}
-
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				// process IP address
+				localAddrs = append(localAddrs, ip)
+				// fmt.Println("ip: ", ip)
+			}
 		}
-	*/
+	}
 
-	// ifaces, err := net.Interfaces()
-	// if err == nil {
-	// 	// handle err
-	// 	for _, i := range ifaces {
-	// 		addrs, err := i.Addrs()
-	// 		if err != nil {
-	// 			break
-	// 		}
-	// 		// handle err
-	// 		for _, addr := range addrs {
-	// 			var ip net.IP
-	// 			switch v := addr.(type) {
-	// 			case *net.IPNet:
-	// 				ip = v.IP
-	// 			case *net.IPAddr:
-	// 				ip = v.IP
-	// 			}
-	// 			// process IP address
-	// 			fmt.Println("ip: ", ip)
-	// 		}
-	// 	}
-	// }
-
-	// check if local is not true and set to false if necessary
-	// net.Interfaces()
+	// Check if source address is local address
+	for i := 0; i < len(localAddrs); i++ {
+		if packetData.SourceIP == localAddrs[i].To16().String() {
+			localSource = true
+		}
+		if packetData.DestIP == localAddrs[i].To16().String() {
+			localDest = true
+		}
+		// fmt.Println("Address ", i, " ", localAddrs[i].To16().String())
+	}
 
 	// If ACCEPT or DROP are ever come across, just return target
 	// While traversing a chain, if the target is a JUMP, go into the new chain
 	// If nothing catches the packet in this new jumped chain, go back to the original chain
-
-	if local {
+	if localDest {
 		// iterate over all the rules in INPUT first
 		target := table.traverseSingleChain(packetData, *table.chains["INPUT"])
 		// fmt.Println("target after traverseSingleChain: ", target)
@@ -259,6 +267,17 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 		} else if target == "" {
 			// fmt.Println("using the defualt policy for INPUT")
 			target = table.chains["INPUT"].defaultPolicy
+			return target
+		}
+	} else if localSource {
+		// iterate over all the rules in INPUT first
+		target := table.traverseSingleChain(packetData, *table.chains["OUTPUT"])
+		// fmt.Println("target after traverseSingleChain: ", target)
+		if target == "ACCEPT" || target == "DROP" {
+			return target
+		} else if target == "" {
+			// fmt.Println("using the defualt policy for INPUT")
+			target = table.chains["OUTPUT"].defaultPolicy
 			return target
 		}
 	} else {
