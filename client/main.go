@@ -41,13 +41,22 @@ func main() {
 	filter := iptable.NewIPTable("ACCEPT")
 	fmt.Println("filter ", filter)
 	target := filter.TraverseChains(records[1])
-	fmt.Println("Target: ", target)
 	filter.AddRule("INPUT", "testRule", "192.168.3.14", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "DROP")
 	// target = filter.TraverseChains(records[84])  // should ACCEPT
 	target = filter.TraverseChains(records[1]) // should DROP
-	fmt.Println("Target: ", target)
+	fmt.Println("Should be DROP: ", target)
 	filter.DeleteRule("INPUT", "testRule")
 	target = filter.TraverseChains(records[1]) // should ACCEPT again now that rule is deleted
-	fmt.Println("Target: ", target)
+	fmt.Println("Should be ACCEPT: ", target)
+
+	fmt.Println("----------------------------")
+
+	// JARRETT TESTING AREA
+	jarFilter := iptable.NewIPTable("ACCEPT")
+	// add a user chain and connect it to INPUT
+	jarFilter.AddChain("myChain", "ANYVAL")
+	jarFilter.AddRule("INPUT", "myJumpRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "myChain")
+	jarTarget := jarFilter.TraverseChains(records[1])
+	fmt.Println("Target: ", jarTarget)
 
 }

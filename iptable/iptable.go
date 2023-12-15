@@ -124,21 +124,12 @@ func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, Dst
 	if chain != nil {
 		chain.rules = append(chain.rules, rule)
 	}
-	return
+
 }
 
 // Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
 // The IP packet to check the conditions against
 func checkRule(rule Rule, packet Packet) (target string) {
-
-	// values := reflect.ValueOf(rule)
-	// types := values.Type()
-	// for i := 0; i < values.NumField(); i++ {
-	// 	if types.Field(i).Name == "ANYVAL" {
-
-	// 	}
-	// }
-
 	if rule.DstIP == "ANYVAL" {
 		rule.DstIP = packet.DestIP
 	}
@@ -167,10 +158,30 @@ func checkRule(rule Rule, packet Packet) (target string) {
 	return target
 }
 
+func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target string) {
+	// iterate over all the rules in this chain
+	for i := 0; i < len(chain.rules); i++ {
+		target = checkRule(chain.rules[i], packet)
+		fmt.Println("just checked the target: ", target)
+		// if target is ACCEPT or DROP, break out immediately
+		if target == "ACCEPT" || target == "DROP" {
+			return target
+		} else if target != "" {
+			// if the target is the name of a chain, traverse that chain.
+			for _, value := range table.chains {
+				if target == value.name {
+					table.traverseSingleChain(packet, *table.chains[value.name])
+				}
+			}
+		}
+	}
+	target = ""
+	return target
+}
+
 func (table *Table) TraverseChains(packet []string) (target string) {
 	// First, routing decision. If it is destined for an outside network, only (filter FORWARD)
 	//  if it stays local, (filter INPUT) and then (filter OUTPUT)
-	fmt.Println("Packet argument: ", packet)
 	packetData := Packet{
 		SourceIP: packet[2],
 		DestIP:   packet[3],
@@ -179,7 +190,6 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	}
 	if packetData.Protocol == "TCP" || packetData.Protocol == "UDP" {
 		ports := strings.Fields(packet[6])
-		fmt.Println(ports)
 		packetData.SourcePort = ports[0]
 		packetData.DestPort = ports[2]
 	}
@@ -227,25 +237,27 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	// While traversing a chain, if the target is a JUMP, go into the new chain
 	// If nothing catches the packet in this new jumped chain, go back to the original chain
 
-	if local == true {
+	if local {
 		// iterate over all the rules in INPUT first
-		fmt.Println("HERE ", table.chains["INPUT"].rules)
-		for i := 0; i < len(table.chains["INPUT"].rules); i++ {
-			fmt.Println("Rule ", table.chains["INPUT"].rules)
-			target = checkRule(table.chains["INPUT"].rules[i], packetData)
-			fmt.Println("Target ", target)
-			if target == "ACCEPT" || target == "DROP" {
-				break
-			}
-		}
-		if target == "" {
+		target := table.traverseSingleChain(packetData, *table.chains["INPUT"])
+		fmt.Println("target after traverseSingleChain: ", target)
+		if target == "ACCEPT" || target == "DROP" {
+			return target
+		} else if target == "" {
+			fmt.Println("using the defualt policy for INPUT")
 			target = table.chains["INPUT"].defaultPolicy
+			return target
 		}
 	} else {
-		// TO DO: ELSE CASE HANDLES FOWARDING
+		target := table.traverseSingleChain(packetData, *table.chains["FORWARD"])
+		if target == "" {
+			fmt.Println("using the defualt policy for FORWARD")
+			target = table.chains["FORWARD"].defaultPolicy
+			return target
+		}
 	}
 
-	// return
+	fmt.Println("target before return: ", target)
 	return target
 
 }
