@@ -1,24 +1,11 @@
 package iptable
 
-// TO DOS:
-// 1. Testing
-// 3. add possible target options
-// 3. Jump!!
-// 4. Routing !!
-// 5. Write PAPER
-// 6. DEMO VIDEO
-// IF TIME
-// 5. Editing rules
-// 6. Inserting rules
-// 7. Replacing rules
-// 8. ERROR CHECKS!
-
 import (
 	"net"
 	"strings"
 )
 
-// packet stucture containing
+// packet stucture for handling incoming packet data
 type Packet struct {
 	SourceIP   string
 	DestIP     string
@@ -28,7 +15,7 @@ type Packet struct {
 	Length     string
 }
 
-// Table structure contains a set of chains
+// Table structure
 type Table struct {
 	name   string
 	chains map[string]*Chain
@@ -43,9 +30,8 @@ type Chain struct {
 
 // rules structure
 type Rule struct {
-	name   string
-	target string
-
+	name     string
+	target   string
 	SrcIP    string
 	DstIP    string
 	SrcPort  string
@@ -54,7 +40,11 @@ type Rule struct {
 	Length   string
 }
 
-// function initialize IPtable
+/*
+	Initializes a new IPTable/Firewall takes as input a string policy
+
+which specifies the default policy for the chains
+*/
 func NewIPTable(policy string) *Table {
 	IPtable := new(Table)
 	IPtable.chains = make(map[string]*Chain)
@@ -62,31 +52,34 @@ func NewIPTable(policy string) *Table {
 	return IPtable.defaultTable(policy)
 }
 
+/*
+Helper function for setting up the IPTable by creating
+default chains for the filter
+*/
 func (table *Table) defaultTable(policy string) *Table {
-	table.AddChain("INPUT", policy)
-	table.AddChain("OUTPUT", policy)
-	table.AddChain("FORWARD", policy)
+	table.addChain("INPUT", policy)
+	table.addChain("OUTPUT", policy)
+	table.addChain("FORWARD", policy)
 	return table
 }
 
-func (table *Table) ChangePolicy(chain string, policy string) {
-	table.chains[chain].defaultPolicy = policy
-}
-
-// function to add a chain
-func (table *Table) AddChain(name string, defaultPolicy string) {
+// Helper function for adding default chains with specified policy
+func (table *Table) addChain(name string, defaultPolicy string) {
 	rule := []Rule{}
-
 	chain := Chain{
 		name:          name,
 		rules:         rule,
 		defaultPolicy: defaultPolicy,
 	}
-
 	table.chains[name] = &chain
 }
 
-// function to add a chain
+/*
+	Function for users to create user chains. Takes the name of the
+
+chain as argument and adds chain table. Note: user chains do not have a
+default policy
+*/
 func (table *Table) AddUserChain(name string) {
 	rule := []Rule{}
 
@@ -98,8 +91,28 @@ func (table *Table) AddUserChain(name string) {
 	table.chains[name] = &chain
 }
 
-// remove rule function (to avoid shifting the list just creates a new list)
-func (table *Table) DeleteRule(chainName string, ruleName string) {
+/*
+	function that allows users to change the default policy for
+
+the chains in the table if they are one of the default chains.
+Returns true if successful and false if chain was not a valid default chain
+*/
+func (table *Table) ChangePolicy(chain string, policy string) bool {
+	if chain == "INPUT" || chain == "OUTPUT" || chain == "FORWARD" {
+		table.chains[chain].defaultPolicy = policy
+		return true
+	}
+	return false
+}
+
+/*
+	function that takes as input two strings specifing a chain name
+
+and rule name. If that chain exists updates that chains rules by creating a
+new rule list that doesnt contain the specified rule if it exists and
+return true. If there is not such chain return false
+*/
+func (table *Table) DeleteRule(chainName string, ruleName string) bool {
 	chain := table.chains[chainName]
 	rules := []Rule{}
 	if chain != nil {
@@ -108,21 +121,27 @@ func (table *Table) DeleteRule(chainName string, ruleName string) {
 				rules = append(rules, chain.rules[i])
 			}
 		}
+		chain.rules = rules
+		return true
 	}
-	chain.rules = rules
+	return false
 }
 
-// function to add a rule to a chain
+/*
+	Function that adds a rule to the specified chain. Takes the chain name and rule name
+
+and each of the parameters possible for matching on a rulename (SrcIP, DstIP, SrcPort, DstPort,
+Protocol, Length) as well as the rule target. Returns true if successful or false if unsuccessful
+*/
 func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, DstIP string,
-	SrcPort string, DstPort string, Protocol string, Length string, target string) {
+	SrcPort string, DstPort string, Protocol string, Length string, target string) bool {
 
 	// get chain in the table
 	chain := table.chains[chainName]
-
+	// create rule
 	rule := Rule{
-		name:   ruleName,
-		target: target,
-
+		name:     ruleName,
+		target:   target,
 		SrcIP:    SrcIP,
 		DstIP:    DstIP,
 		Protocol: Protocol,
@@ -134,14 +153,19 @@ func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, Dst
 	// if chain exists append rule to end of function
 	if chain != nil {
 		chain.rules = append(chain.rules, rule)
+		return true
 	}
+	return false
 
 }
 
-// Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
-// The IP packet to check the conditions against
-func checkRule(rule Rule, packet Packet) (target string) {
+/*
+	Helper function: Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
 
+The IP packet to check the conditions against. Returns the target of that rule if all the conditions are matched
+or an empty string if not
+*/
+func checkRule(rule Rule, packet Packet) (target string) {
 	if rule.DstIP == "ANYVAL" {
 		rule.DstIP = packet.DestIP
 	}
@@ -160,14 +184,11 @@ func checkRule(rule Rule, packet Packet) (target string) {
 	if rule.Protocol == "ANYVAL" {
 		rule.Protocol = packet.Protocol
 	}
-
 	if rule.SrcIP == packet.SourceIP && rule.DstIP == packet.DestIP && rule.SrcPort == packet.SourcePort && rule.DstPort == packet.DestPort && rule.Protocol == packet.Protocol && rule.Length == packet.Length {
 		target = rule.target
-		// fmt.Println("returning a matched target: ", target)
 	} else {
 		target = ""
 	}
-
 	return target
 }
 
@@ -176,7 +197,7 @@ func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target stri
 	for i := 0; i < len(chain.rules); i++ {
 		target = checkRule(chain.rules[i], packet)
 		// fmt.Println("just checked the target: ", target)
-		// if target is ACCEPT or DROP, break out immediately
+		// if t`arget is ACCEPT or DROP, break out immediately
 		if target == "ACCEPT" || target == "DROP" {
 			return target
 		} else if target != "" {
@@ -213,7 +234,6 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 			}
 		}
 	}
-
 	localSource := false
 	localDest := false
 	// get local addresses
@@ -240,7 +260,6 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 				}
 				// process IP address
 				localAddrs = append(localAddrs, ip)
-				// fmt.Println("ip: ", ip)
 			}
 		}
 	}
@@ -253,38 +272,32 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 		if packetData.DestIP == localAddrs[i].To16().String() {
 			localDest = true
 		}
-		// fmt.Println("Address ", i, " ", localAddrs[i].To16().String())
 	}
 
-	// fmt.Println(localDest)
-	// fmt.Println(localAddrs)
-	localDest = true
-	localSource = true
+	// used for testing packets
+	// localDest = true
+	// localSource = true
 
 	// If ACCEPT or DROP are ever come across, just return target
 	// While traversing a chain, if the target is a JUMP, go into the new chain
 	// If nothing catches the packet in this new jumped chain, go back to the original chain
 	if localDest || localSource {
 		if localDest {
-			// iterate over all the rules in INPUT first
+			// iterate over all the rules in INPUT
 			target := table.traverseSingleChain(packetData, *table.chains["INPUT"])
-			// fmt.Println("target after traverseSingleChain: ", target)
 			if target == "ACCEPT" || target == "DROP" {
 				return target
 			} else if target == "" {
-				// fmt.Println("using the defualt policy for INPUT")
 				target = table.chains["INPUT"].defaultPolicy
 				return target
 			}
 		}
 		if localSource {
-			// iterate over all the rules in INPUT first
+			// iterate over all the rules in OUTPUT
 			target := table.traverseSingleChain(packetData, *table.chains["OUTPUT"])
-			// fmt.Println("target after traverseSingleChain: ", target)
 			if target == "ACCEPT" || target == "DROP" {
 				return target
 			} else if target == "" {
-				// fmt.Println("using the defualt policy for INPUT")
 				target = table.chains["OUTPUT"].defaultPolicy
 				return target
 			}
@@ -292,13 +305,9 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	} else {
 		target := table.traverseSingleChain(packetData, *table.chains["FORWARD"])
 		if target == "" {
-			// fmt.Println("using the defualt policy for FORWARD")
 			target = table.chains["FORWARD"].defaultPolicy
 			return target
 		}
 	}
-
-	// fmt.Println("target before return: ", target)
 	return target
-
 }
