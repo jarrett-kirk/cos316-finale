@@ -41,10 +41,11 @@ type Rule struct {
 }
 
 // Initializes a new IPTable/Firewall takes as input a string policy
-// which specifies the default policy for the chains. Policy must be 
+// which specifies the default policy for the chains. Policy must be
 // "ACCEPT" or "DROP" or it will default to "DROP"
 func NewIPTable(policy string) *Table {
-	if(policy != "ACCEPT" || policy != "DROP" {
+	if policy == "ACCEPT" || policy == "DROP" {
+	} else {
 		policy = "DROP"
 	}
 	IPtable := new(Table)
@@ -92,9 +93,10 @@ func (table *Table) AddUserChain(name string) {
 // Returns true if successful and false if chain was not a valid default chain
 func (table *Table) ChangePolicy(chain string, policy string) bool {
 	if chain == "INPUT" || chain == "OUTPUT" || chain == "FORWARD" {
-		if(policy != "ACCEPT" || policy != "DROP" {
+		if policy == "ACCEPT" || policy == "DROP" {
+		} else {
 			return false
-		}	
+		}
 		table.chains[chain].defaultPolicy = policy
 		return true
 	}
