@@ -15,6 +15,7 @@ package iptable
 
 import (
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -185,6 +186,40 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	fmt.Println("Packet Data ", packetData)
 
 	local := true
+	// get local addresses
+	/*
+		addrs, err := net.InterfaceAddrs()
+		if err == nil {
+			for i := 0; i < len(addrs); i++ {
+				fmt.Println(addrs[i])
+			}
+
+		}
+	*/
+
+	ifaces, err := net.Interfaces()
+	if err == nil {
+		// handle err
+		for _, i := range ifaces {
+			addrs, err := i.Addrs()
+			if err != nil {
+				break
+			}
+			// handle err
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				// process IP address
+				fmt.Println("ip: ", ip)
+			}
+		}
+	}
+
 	// check if local is not true and set to false if necessary
 	// net.Interfaces()
 
