@@ -1,6 +1,7 @@
 package iptable
 
 import (
+	"fmt"
 	"net"
 	"strings"
 )
@@ -40,11 +41,8 @@ type Rule struct {
 	Length   string
 }
 
-/*
-	Initializes a new IPTable/Firewall takes as input a string policy
-
-which specifies the default policy for the chains
-*/
+// Initializes a new IPTable/Firewall takes as input a string policy
+// which specifies the default policy for the chains
 func NewIPTable(policy string) *Table {
 	IPtable := new(Table)
 	IPtable.chains = make(map[string]*Chain)
@@ -52,10 +50,8 @@ func NewIPTable(policy string) *Table {
 	return IPtable.defaultTable(policy)
 }
 
-/*
-Helper function for setting up the IPTable by creating
-default chains for the filter
-*/
+// Helper function for setting up the IPTable by creating
+// default chains for the filter
 func (table *Table) defaultTable(policy string) *Table {
 	table.addChain("INPUT", policy)
 	table.addChain("OUTPUT", policy)
@@ -74,12 +70,9 @@ func (table *Table) addChain(name string, defaultPolicy string) {
 	table.chains[name] = &chain
 }
 
-/*
-	Function for users to create user chains. Takes the name of the
-
-chain as argument and adds chain table. Note: user chains do not have a
-default policy
-*/
+// Function for users to create user chains. Takes the name of the
+// chain as argument and adds chain table. Note: user chains do not have a
+// default policy
 func (table *Table) AddUserChain(name string) {
 	rule := []Rule{}
 
@@ -91,12 +84,9 @@ func (table *Table) AddUserChain(name string) {
 	table.chains[name] = &chain
 }
 
-/*
-	function that allows users to change the default policy for
-
-the chains in the table if they are one of the default chains.
-Returns true if successful and false if chain was not a valid default chain
-*/
+// function that allows users to change the default policy for
+// the chains in the table if they are one of the default chains.
+// Returns true if successful and false if chain was not a valid default chain
 func (table *Table) ChangePolicy(chain string, policy string) bool {
 	if chain == "INPUT" || chain == "OUTPUT" || chain == "FORWARD" {
 		table.chains[chain].defaultPolicy = policy
@@ -105,13 +95,10 @@ func (table *Table) ChangePolicy(chain string, policy string) bool {
 	return false
 }
 
-/*
-	function that takes as input two strings specifing a chain name
-
-and rule name. If that chain exists updates that chains rules by creating a
-new rule list that doesnt contain the specified rule if it exists and
-return true. If there is not such chain return false
-*/
+// function that takes as input two strings specifing a chain name
+// and rule name. If that chain exists updates that chains rules by creating a
+// new rule list that doesnt contain the specified rule if it exists and
+// return true. If there is not such chain return false
 func (table *Table) DeleteRule(chainName string, ruleName string) bool {
 	chain := table.chains[chainName]
 	rules := []Rule{}
@@ -127,12 +114,9 @@ func (table *Table) DeleteRule(chainName string, ruleName string) bool {
 	return false
 }
 
-/*
-	Function that adds a rule to the specified chain. Takes the chain name and rule name
-
-and each of the parameters possible for matching on a rulename (SrcIP, DstIP, SrcPort, DstPort,
-Protocol, Length) as well as the rule target. Returns true if successful or false if unsuccessful
-*/
+// Function that adds a rule to the specified chain. Takes the chain name and rule name
+// and each of the parameters possible for matching on a rulename (SrcIP, DstIP, SrcPort, DstPort,
+// Protocol, Length) as well as the rule target. Returns true if successful or false if unsuccessful
 func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, DstIP string,
 	SrcPort string, DstPort string, Protocol string, Length string, target string) bool {
 
@@ -159,12 +143,9 @@ func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, Dst
 
 }
 
-/*
-	Helper function: Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
-
-The IP packet to check the conditions against. Returns the target of that rule if all the conditions are matched
-or an empty string if not
-*/
+// Helper function: Takes in a Rule, which is a struct with all pertinent information to match. It also takes in
+// The IP packet to check the conditions against. Returns the target of that rule if all the conditions are matched
+// or an empty string if not
 func checkRule(rule Rule, packet Packet) (target string) {
 	if rule.DstIP == "ANYVAL" {
 		rule.DstIP = packet.DestIP
@@ -217,12 +198,10 @@ func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target stri
 	return target
 }
 
-/*
-routing helper function takes as input packetData in the form of a Packet struct.
-Gets the local network information and IP addresses then compares it to the data
-in the packet. If the source addresses match return localSource as true if not return it as false
-and same for localDest with the destination address
-*/
+// routing helper function takes as input packetData in the form of a Packet struct.
+// Gets the local network information and IP addresses then compares it to the data
+// in the packet. If the source addresses match return localSource as true if not return it as false
+// and same for localDest with the destination address
 func (table *Table) routingDecision(packetData Packet) (localSource bool, localDest bool) {
 	localSource = false
 	localDest = false
@@ -263,15 +242,17 @@ func (table *Table) routingDecision(packetData Packet) (localSource bool, localD
 			localDest = true
 		}
 	}
+
+	// [127.0.0.1 ::1 fe80::1 fe80::38f9:d3ff:fe31:ff0e fe80::8d4:55f0:4b5c:ba8a 10.8.30.80 fe80::741b:e5ff:fef7:ad09 fe80::741b:e5ff:fef7:ad09 fe80::810b:f11c:54c8:fd29 fe80::5533:f410:b90b:1ba8 fe80::ce81:b1c:bd2c:69e fe80::7d1:ab3d:8490:1d5f fe80::8131:7bc3:5e7d:4efc fe80::aede:48ff:fe00:1122]
+	fmt.Println(packetData.SourceIP)
+	fmt.Println(packetData.DestIP)
+
 	return localSource, localDest
-}
+}``
 
-/*
-	Takes as input a packet routes the packet to the correct chain in the table
-
-and then traverses the rules in that table until a target decision is made. Returns
-the result of the filtering.
-*/
+// Takes as input a packet routes the packet to the correct chain in the table
+// and then traverses the rules in that table until a target decision is made. Returns
+// the result of the filtering.
 func (table *Table) TraverseChains(packet []string) (target string) {
 	// First, routing decision. If it is destined for an outside network, only (filter FORWARD)
 	//  if it stays local, (filter INPUT) and then (filter OUTPUT)

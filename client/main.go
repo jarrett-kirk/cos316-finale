@@ -11,13 +11,13 @@ import (
 )
 
 func filterData(filter *iptable.Table, records [][]string) {
-	for _, eachrecord := range records {
-		if filter.TraverseChains(eachrecord) == "ACCEPT" {
-			fmt.Println(eachrecord)
-		}
-	}
-	// target := filter.TraverseChains(records[1])
-	// fmt.Println(target)
+	// for _, eachrecord := range records {
+	// 	if filter.TraverseChains(eachrecord) == "ACCEPT" {
+	// 		fmt.Println(eachrecord)
+	// 	}
+	// }
+	target := filter.TraverseChains(records[1])
+	fmt.Println(target)
 }
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	// os.Open() opens specific file in
 	// read-only mode and this return
 	// a pointer of type os.File
-	file, err := os.Open("TEST_PACKETS1.csv")
+	file, err := os.Open("testing-local.csv")
 
 	// Checks for the error
 	if err != nil {
@@ -48,7 +48,7 @@ func main() {
 	// 6. Add a rule to INPUT to jump to our user chain if destip == something, send a bunch of stuff through
 	mainFilter := iptable.NewIPTable("DROP")
 
-	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "ANYVAL", "443", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
+	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "ANYVAL", "ANYVAL", "443", "TCP", "ANYVAL", "ACCEPT")
 
 	// mainFilter.AddUserChain("userChain")
 	// mainFilter.AddRule("INPUT", "ipRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "userChain")
