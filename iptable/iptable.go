@@ -192,6 +192,7 @@ func checkRule(rule Rule, packet Packet) (target string) {
 	return target
 }
 
+// helper function that traverses a single chain
 func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target string) {
 	// iterate over all the rules in this chain
 	for i := 0; i < len(chain.rules); i++ {
@@ -216,26 +217,15 @@ func (table *Table) traverseSingleChain(packet Packet, chain Chain) (target stri
 	return target
 }
 
-func (table *Table) TraverseChains(packet []string) (target string) {
-	// First, routing decision. If it is destined for an outside network, only (filter FORWARD)
-	//  if it stays local, (filter INPUT) and then (filter OUTPUT)
-	packetData := Packet{
-		SourceIP: packet[2],
-		DestIP:   packet[3],
-		Protocol: packet[4],
-		Length:   packet[5],
-	}
-	if packetData.Protocol == "TCP" || packetData.Protocol == "UDP" {
-		ports := strings.Fields(packet[6])
-		for i := 0; i < len(ports); i++ {
-			if ports[i] == ">" {
-				packetData.SourcePort = ports[i-1]
-				packetData.DestPort = ports[i+1]
-			}
-		}
-	}
-	localSource := false
-	localDest := false
+/*
+routing helper function takes as input packetData in the form of a Packet struct.
+Gets the local network information and IP addresses then compares it to the data
+in the packet. If the source addresses match return localSource as true if not return it as false
+and same for localDest with the destination address
+*/
+func (table *Table) routingDecision(packetData Packet) (localSource bool, localDest bool) {
+	localSource = false
+	localDest = false
 	// get local addresses
 	localAddrs := []net.IP{}
 	// Section adapted from : https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go
@@ -273,6 +263,35 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 			localDest = true
 		}
 	}
+	return localSource, localDest
+}
+
+/*
+	Takes as input a packet routes the packet to the correct chain in the table
+
+and then traverses the rules in that table until a target decision is made. Returns
+the result of the filtering.
+*/
+func (table *Table) TraverseChains(packet []string) (target string) {
+	// First, routing decision. If it is destined for an outside network, only (filter FORWARD)
+	//  if it stays local, (filter INPUT) and then (filter OUTPUT)
+	packetData := Packet{
+		SourceIP: packet[2],
+		DestIP:   packet[3],
+		Protocol: packet[4],
+		Length:   packet[5],
+	}
+	if packetData.Protocol == "TCP" || packetData.Protocol == "UDP" {
+		ports := strings.Fields(packet[6])
+		for i := 0; i < len(ports); i++ {
+			if ports[i] == ">" {
+				packetData.SourcePort = ports[i-1]
+				packetData.DestPort = ports[i+1]
+			}
+		}
+	}
+
+	localSource, localDest := table.routingDecision(packetData)
 
 	// used for testing packets
 	// localDest = true
