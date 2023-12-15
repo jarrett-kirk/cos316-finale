@@ -14,7 +14,6 @@ package iptable
 // 8. ERROR CHECKS!
 
 import (
-	"fmt"
 	"net"
 	"strings"
 )
@@ -143,8 +142,6 @@ func (table *Table) AddRule(chainName string, ruleName string, SrcIP string, Dst
 // The IP packet to check the conditions against
 func checkRule(rule Rule, packet Packet) (target string) {
 
-	fmt.Println(rule.SrcPort == packet.SourcePort)
-
 	if rule.DstIP == "ANYVAL" {
 		rule.DstIP = packet.DestIP
 	}
@@ -166,7 +163,7 @@ func checkRule(rule Rule, packet Packet) (target string) {
 
 	if rule.SrcIP == packet.SourceIP && rule.DstIP == packet.DestIP && rule.SrcPort == packet.SourcePort && rule.DstPort == packet.DestPort && rule.Protocol == packet.Protocol && rule.Length == packet.Length {
 		target = rule.target
-		fmt.Println("returning a matched target: ", target)
+		// fmt.Println("returning a matched target: ", target)
 	} else {
 		target = ""
 	}
@@ -209,8 +206,12 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 	}
 	if packetData.Protocol == "TCP" || packetData.Protocol == "UDP" {
 		ports := strings.Fields(packet[6])
-		packetData.SourcePort = ports[0]
-		packetData.DestPort = ports[2]
+		for i := 0; i < len(ports); i++ {
+			if ports[i] == ">" {
+				packetData.SourcePort = ports[i-1]
+				packetData.DestPort = ports[i+1]
+			}
+		}
 	}
 
 	localSource := false
@@ -254,6 +255,11 @@ func (table *Table) TraverseChains(packet []string) (target string) {
 		}
 		// fmt.Println("Address ", i, " ", localAddrs[i].To16().String())
 	}
+
+	// fmt.Println(localDest)
+	// fmt.Println(localAddrs)
+	localDest = true
+	localSource = true
 
 	// If ACCEPT or DROP are ever come across, just return target
 	// While traversing a chain, if the target is a JUMP, go into the new chain

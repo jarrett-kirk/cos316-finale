@@ -48,7 +48,7 @@ func main() {
 	// 6. Add a rule to INPUT to jump to our user chain if destip == something, send a bunch of stuff through
 	mainFilter := iptable.NewIPTable("DROP")
 
-	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "ANYVAL", "7000", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
+	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "ANYVAL", "443", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
 
 	// mainFilter.AddUserChain("userChain")
 	// mainFilter.AddRule("INPUT", "ipRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "userChain")
