@@ -10,12 +10,15 @@ import (
 	"os"
 )
 
-func filterData(filter *iptable.Table, records [][]string) {
+func filterData(filter *iptable.Table, records [][]string) int {
+	counter := 0
 	for _, eachrecord := range records {
 		if filter.TraverseChains(eachrecord) == "ACCEPT" {
 			fmt.Println(eachrecord)
+			counter++
 		}
 	}
+	return counter
 	// target := filter.TraverseChains(records[1])
 	// fmt.Println(target)
 }
@@ -25,7 +28,7 @@ func main() {
 	// os.Open() opens specific file in
 	// read-only mode and this return
 	// a pointer of type os.File
-	file, err := os.Open("testing-local.csv")
+	file, err := os.Open("mirai-attack.csv")
 
 	// Checks for the error
 	if err != nil {
@@ -40,22 +43,24 @@ func main() {
 	}
 
 	// Things to test:
-	// 1. Create a default table with ACCEPT policy, send a bunch of stuff through, all accepts
-	// 2. Create a rule on INPUT ipSource, send a bunch of stuff through, only matching accepts
-	// 3. Create a rule on INPUT protocol == TCP with a specific port, only matching get throughconst
-	// 4. Delete the ipSource rule
-	// 5. Create a user chain
-	// 6. Add a rule to INPUT to jump to our user chain if destip == something, send a bunch of stuff through
+	// 1. Table with ACCEPT default policy
+	// 2. Table with DROP default policy
+	// 3. Add rule to ACCEPT when sourceIP == 10.0.0.252 (local)
+	// 4. Delete rule
+	// 5. Add rule to ACCEPT when protocol == "TCP" and sourceIP == 10.0.0.252
+	// 6. Create a user chain
+	// 7. Add rule to user chain to drop if sourcePort == 443
+	// 8. Add jump to user chain after INPUT
+
 	mainFilter := iptable.NewIPTable("DROP")
 
-	mainFilter.AddRule("OUTPUT", "protocolRule", "10.0.0.252", "ANYVAL", "ANYVAL", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
+	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "10.0.0.252", "ANYVAL", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
+	mainFilter.AddUserChain("myChain")
+	mainFilter.AddRule("myChain", "destPortRule", "ANYVAL", "ANYVAL", "ANYVAL", "62130", "UDP", "ANYVAL", "ACCEPT")
+	mainFilter.AddRule("INPUT", "jumpRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "myChain")
 
-	// mainFilter.AddUserChain("userChain")
-	// mainFilter.AddRule("INPUT", "ipRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "userChain")
-	// mainFilter.AddRule("userChain", "ipRule", "192.168.3.13", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ACCEPT")
-	// mainFilter.AddRule("userChain", "ipRule", "192.168.3.14", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ACCEPT")
-
-	filterData(mainFilter, records)
-	fmt.Println("----------------------------")
+	counter := filterData(mainFilter, records)
+	fmt.Println("------------------------------------------------------------------------")
 	fmt.Println("Above are all records that got through the firewall!")
+	fmt.Println("Number of records: ", counter)
 }
