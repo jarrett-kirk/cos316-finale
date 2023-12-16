@@ -28,7 +28,7 @@ func main() {
 	// os.Open() opens specific file in
 	// read-only mode and this return
 	// a pointer of type os.File
-	file, err := os.Open("mirai-attack.csv")
+	file, err := os.Open("testing-local.csv")
 
 	// Checks for the error
 	if err != nil {
@@ -54,6 +54,8 @@ func main() {
 
 	mainFilter := iptable.NewIPTable("DROP")
 
+	mainFilter.AddRule("OUTPUT", "localRule", "10.0.0.252", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ACCEPT")
+	mainFilter.DeleteRule("OUTPUT", "localRule")
 	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "10.0.0.252", "ANYVAL", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
 	mainFilter.AddUserChain("myChain")
 	mainFilter.AddRule("myChain", "destPortRule", "ANYVAL", "ANYVAL", "ANYVAL", "62130", "UDP", "ANYVAL", "ACCEPT")
