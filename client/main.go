@@ -56,10 +56,10 @@ func main() {
 
 	mainFilter.AddRule("OUTPUT", "localRule", "10.0.0.252", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ACCEPT")
 	mainFilter.DeleteRule("OUTPUT", "localRule")
-	mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "10.0.0.252", "ANYVAL", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
-	mainFilter.AddUserChain("myChain")
-	mainFilter.AddRule("myChain", "destPortRule", "ANYVAL", "ANYVAL", "ANYVAL", "62130", "UDP", "ANYVAL", "ACCEPT")
-	mainFilter.AddRule("INPUT", "jumpRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "myChain")
+	// mainFilter.AddRule("INPUT", "protocolRule", "ANYVAL", "10.0.0.252", "ANYVAL", "ANYVAL", "TCP", "ANYVAL", "ACCEPT")
+	// mainFilter.AddUserChain("myChain")
+	// mainFilter.AddRule("myChain", "destPortRule", "ANYVAL", "ANYVAL", "ANYVAL", "62130", "UDP", "ANYVAL", "ACCEPT")
+	// mainFilter.AddRule("INPUT", "jumpRule", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "ANYVAL", "myChain")
 
 	counter := filterData(mainFilter, records)
 	fmt.Println("------------------------------------------------------------------------")
